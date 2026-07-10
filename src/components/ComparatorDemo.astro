@@ -1,0 +1,153 @@
+<div class="demo-panel" id="cmp-demo">
+  <p class="demo-status" id="cmp-status">Ready.</p>
+
+  <div class="demo-row">
+    <label>Alice's number (a) and Bob's number (b), 0–3</label>
+    <div class="bit-picker-row">
+      <div class="bit-picker">
+        <span>a</span>
+        <div class="demo-toggle" id="cmp-a-toggle">
+          <button type="button" data-val="0" class="active">0</button>
+          <button type="button" data-val="1">1</button>
+          <button type="button" data-val="2">2</button>
+          <button type="button" data-val="3">3</button>
+        </div>
+      </div>
+      <div class="bit-picker">
+        <span>b</span>
+        <div class="demo-toggle" id="cmp-b-toggle">
+          <button type="button" data-val="0" class="active">0</button>
+          <button type="button" data-val="1">1</button>
+          <button type="button" data-val="2">2</button>
+          <button type="button" data-val="3">3</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="demo-row">
+    <button id="cmp-garble-btn" type="button">1. Garble the circuit (11 gates)</button>
+  </div>
+
+  <div class="demo-divider" id="cmp-garbled-info" hidden>
+    <p class="demo-hint">
+      11 garbled gates built — <code>gt = (a₁ AND NOT b₁) OR (NOT(a₁ XOR b₁) AND (a₀ AND NOT b₀))</code>,
+      with each OR built from AND + NOT (De Morgan's law), so only AND/XOR/NOT gates are used, same as <a href="/how-it-works">how it works</a>.
+      Each gate is an independent garbled table, exactly like the <a href="#garble-and-evaluate-an-and-gate">single AND-gate demo</a> above — just eleven of them, chained so one gate's output label becomes the next gate's input label.
+    </p>
+    <button id="cmp-evaluate-btn" type="button">2. Evaluate</button>
+  </div>
+
+  <div class="demo-divider" id="cmp-trace" hidden>
+    <p class="demo-label">Evaluator works through the circuit gate by gate</p>
+    <div id="cmp-trace-rows"></div>
+  </div>
+
+  <div class="demo-divider" id="cmp-result" hidden>
+    <p class="demo-check" id="cmp-result-check"></p>
+  </div>
+</div>
+
+<script>
+  import {
+    buildComparatorCircuit,
+    evaluateComparatorCircuit,
+  } from '../lib/garbled-circuit.js';
+
+  const statusEl = document.getElementById('cmp-status')!;
+  const aToggle = document.getElementById('cmp-a-toggle')!;
+  const bToggle = document.getElementById('cmp-b-toggle')!;
+  const garbleBtn = document.getElementById('cmp-garble-btn') as HTMLButtonElement;
+  const garbledInfoEl = document.getElementById('cmp-garbled-info')!;
+  const evaluateBtn = document.getElementById('cmp-evaluate-btn') as HTMLButtonElement;
+  const traceEl = document.getElementById('cmp-trace')!;
+  const traceRowsEl = document.getElementById('cmp-trace-rows')!;
+  const resultEl = document.getElementById('cmp-result')!;
+  const resultCheckEl = document.getElementById('cmp-result-check')!;
+
+  let a = 0;
+  let b = 0;
+  let circuit: any = null;
+
+  function setToggle(container: HTMLElement, val: number) {
+    for (const btn of container.querySelectorAll('button')) {
+      btn.classList.toggle('active', Number((btn as HTMLElement).dataset.val) === val);
+    }
+  }
+
+  aToggle.addEventListener('click', (e) => {
+    const t = (e.target as HTMLElement).closest('button');
+    if (!t) return;
+    a = Number(t.dataset.val);
+    setToggle(aToggle, a);
+    traceEl.hidden = true;
+    resultEl.hidden = true;
+  });
+  bToggle.addEventListener('click', (e) => {
+    const t = (e.target as HTMLElement).closest('button');
+    if (!t) return;
+    b = Number(t.dataset.val);
+    setToggle(bToggle, b);
+    traceEl.hidden = true;
+    resultEl.hidden = true;
+  });
+
+  garbleBtn.addEventListener('click', async () => {
+    garbleBtn.disabled = true;
+    statusEl.textContent = 'Garbling 11 gates…';
+    circuit = await buildComparatorCircuit();
+    statusEl.textContent = 'Circuit garbled.';
+    garbledInfoEl.hidden = false;
+    traceEl.hidden = true;
+    resultEl.hidden = true;
+    garbleBtn.disabled = false;
+  });
+
+  evaluateBtn.addEventListener('click', async () => {
+    if (!circuit) return;
+    const a1 = (a >> 1) & 1, a0 = a & 1;
+    const b1 = (b >> 1) & 1, b0 = b & 1;
+
+    const { trace, gtBit } = await evaluateComparatorCircuit(circuit, a1, a0, b1, b0);
+
+    traceRowsEl.innerHTML = trace
+      .map(
+        (t: any) =>
+          `<div class="eval-attempt"><code>${t.gate.label}</code> → tried ${t.attemptsCount} rows, row ${t.matchIndex} had the zero tail → <strong>${t.outBit}</strong></div>`
+      )
+      .join('');
+    traceEl.hidden = false;
+
+    const expected = a > b ? 1 : 0;
+    const ok = gtBit === expected;
+    resultCheckEl.textContent = ok
+      ? `✓ gt decoded to ${gtBit} — matches real comparison: ${a} > ${b} = ${expected === 1}`
+      : `✗ mismatch (should never happen): gt=${gtBit}, expected ${expected}`;
+    resultCheckEl.className = `demo-check ${ok ? 'ok' : 'bad'}`;
+    resultEl.hidden = false;
+  });
+</script>
+
+<style>
+  .bit-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-top: 0.5rem;
+  }
+  .bit-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .eval-attempt {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    padding: 0.4em 0;
+    border-bottom: 1px dashed var(--border);
+  }
+</style>

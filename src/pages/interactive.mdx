@@ -1,16 +1,19 @@
 ---
 layout: ../layouts/Layout.astro
-title: Interactive demo
-description: Garble and evaluate a real AND gate, step by step, entirely in your browser — labels, table construction, shuffling, evaluation, and the zero-check.
+title: Interactive demos
+description: Garble and evaluate a real AND gate step by step, then a full 2-bit comparator built from 11 chained gates — entirely in your browser.
 ---
 
 import AndGateDemo from '../components/AndGateDemo.astro';
+import ComparatorDemo from '../components/ComparatorDemo.astro';
 
-# Interactive: garble and evaluate an AND gate
+# Interactive demos
 
-This runs the exact construction from [how it works](/how-it-works) — real
-SHA-256 keystreams and XOR, computed live via the browser's Web Crypto API.
-Nothing here is precomputed or mocked.
+Both demos on this page run the exact construction from [how it
+works](/how-it-works) — real SHA-256 keystreams and XOR, computed live via the
+browser's Web Crypto API. Nothing here is precomputed or mocked.
+
+## Garble and evaluate an AND gate
 
 1. **Garble the gate** — generates six fresh random 128-bit wire labels and
    builds the 4-row garbled table, then shuffles it.
@@ -23,6 +26,17 @@ Try different input combinations and re-garble to see the labels and table
 contents change completely each time — nothing about a label or a ciphertext's
 position reveals what it corresponds to.
 
+## Compare two 2-bit numbers
+
+A single AND gate proves the construction — this shows it scales. Alice and
+Bob each pick a number from 0–3; the circuit below computes **a > b** using
+eleven chained AND/XOR/NOT gates (the "two millionaires" idea from [what
+garbled circuits are](/what-are-garbled-circuits), just very small numbers),
+without either input ever appearing anywhere except as an opaque wire label.
+
+<ComparatorDemo />
+
 ---
 
-**Sources:** implements the scheme derived on [how it works](/how-it-works).
+**Sources:** implements the constructions derived on [how it
+works](/how-it-works).
