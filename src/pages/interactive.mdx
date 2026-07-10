@@ -1,0 +1,28 @@
+---
+layout: ../layouts/Layout.astro
+title: Interactive demo
+description: Garble and evaluate a real AND gate, step by step, entirely in your browser — labels, table construction, shuffling, evaluation, and the zero-check.
+---
+
+import AndGateDemo from '../components/AndGateDemo.astro';
+
+# Interactive: garble and evaluate an AND gate
+
+This runs the exact construction from [how it works](/how-it-works) — real
+SHA-256 keystreams and XOR, computed live via the browser's Web Crypto API.
+Nothing here is precomputed or mocked.
+
+1. **Garble the gate** — generates six fresh random 128-bit wire labels and
+   builds the 4-row garbled table, then shuffles it.
+2. **Pick input bits** and **evaluate** — the Evaluator XORs its keystream
+   against all 4 shuffled rows and keeps the one whose last 128 bits are zero.
+
+<AndGateDemo />
+
+Try different input combinations and re-garble to see the labels and table
+contents change completely each time — nothing about a label or a ciphertext's
+position reveals what it corresponds to.
+
+---
+
+**Sources:** implements the scheme derived on [how it works](/how-it-works).

@@ -1,0 +1,243 @@
+<div class="demo-panel" id="and-demo">
+  <p class="demo-status" id="and-status">Ready.</p>
+
+  <div class="demo-row">
+    <button id="and-garble-btn" type="button">1. Garble the gate</button>
+  </div>
+
+  <div class="demo-divider" id="and-labels" hidden>
+    <p class="demo-label">Wire labels (128-bit, random — nothing about the bits reveals 0 vs 1)</p>
+    <div class="label-grid">
+      <div><span class="label-name">W₁⁰</span><code id="and-w1-0"></code></div>
+      <div><span class="label-name">W₁¹</span><code id="and-w1-1"></code></div>
+      <div><span class="label-name">W₂⁰</span><code id="and-w2-0"></code></div>
+      <div><span class="label-name">W₂¹</span><code id="and-w2-1"></code></div>
+      <div><span class="label-name">Wₒᵤₜ⁰</span><code id="and-wout-0"></code></div>
+      <div><span class="label-name">Wₒᵤₜ¹</span><code id="and-wout-1"></code></div>
+    </div>
+
+    <p class="demo-label" style="margin-top: 1.2rem;">Garbled table (4 rows garbled, then shuffled)</p>
+    <div id="and-rows"></div>
+    <p class="demo-hint">This is what the Garbler builds — the row order the Evaluator receives (below) has been randomly shuffled, so position leaks nothing.</p>
+    <table class="garbled-table" id="and-table"></table>
+  </div>
+
+  <div class="demo-divider" id="and-inputs" hidden>
+    <p class="demo-label">Pick input bits</p>
+    <div class="bit-picker-row">
+      <div class="bit-picker">
+        <span>Input A</span>
+        <div class="demo-toggle" id="and-a-toggle">
+          <button type="button" data-val="0" class="active">0</button>
+          <button type="button" data-val="1">1</button>
+        </div>
+      </div>
+      <div class="bit-picker">
+        <span>Input B</span>
+        <div class="demo-toggle" id="and-b-toggle">
+          <button type="button" data-val="0" class="active">0</button>
+          <button type="button" data-val="1">1</button>
+        </div>
+      </div>
+      <button id="and-evaluate-btn" type="button">2. Evaluate</button>
+    </div>
+    <p class="demo-hint">
+      In a real protocol these labels would reach the Evaluator via Oblivious Transfer, not
+      be picked from a dropdown — see <a href="/how-it-works#what-this-demo-leaves-out-oblivious-transfer">why that's skipped here</a>.
+    </p>
+  </div>
+
+  <div class="demo-divider" id="and-eval" hidden>
+    <p class="demo-label">Evaluator tries all 4 rows, keeping the one with a zero tail</p>
+    <div id="and-attempts"></div>
+  </div>
+
+  <div class="demo-divider" id="and-result" hidden>
+    <p class="demo-check" id="and-result-check"></p>
+  </div>
+</div>
+
+<script>
+  import { randomLabel, garbleAndGate, evaluateAndGate, toHex, labelsEqual } from '../lib/garbled-and.js';
+
+  const statusEl = document.getElementById('and-status')!;
+  const garbleBtn = document.getElementById('and-garble-btn') as HTMLButtonElement;
+  const labelsEl = document.getElementById('and-labels')!;
+  const rowsEl = document.getElementById('and-rows')!;
+  const tableEl = document.getElementById('and-table') as HTMLTableElement;
+  const inputsEl = document.getElementById('and-inputs')!;
+  const aToggle = document.getElementById('and-a-toggle')!;
+  const bToggle = document.getElementById('and-b-toggle')!;
+  const evaluateBtn = document.getElementById('and-evaluate-btn')!;
+  const evalEl = document.getElementById('and-eval')!;
+  const attemptsEl = document.getElementById('and-attempts')!;
+  const resultEl = document.getElementById('and-result')!;
+  const resultCheckEl = document.getElementById('and-result-check')!;
+
+  function short(bytes: Uint8Array, chars = 16) {
+    const hex = toHex(bytes);
+    return hex.length > chars ? `${hex.slice(0, chars)}…` : hex;
+  }
+
+  let wires: any = null;
+  let gateId = '';
+  let table: Uint8Array[] = [];
+  let a = 0;
+  let b = 0;
+
+  function setToggle(container: HTMLElement, val: number) {
+    for (const btn of container.querySelectorAll('button')) {
+      btn.classList.toggle('active', Number((btn as HTMLElement).dataset.val) === val);
+    }
+  }
+
+  aToggle.addEventListener('click', (e) => {
+    const t = (e.target as HTMLElement).closest('button');
+    if (!t) return;
+    a = Number(t.dataset.val);
+    setToggle(aToggle, a);
+    evalEl.hidden = true;
+    resultEl.hidden = true;
+  });
+  bToggle.addEventListener('click', (e) => {
+    const t = (e.target as HTMLElement).closest('button');
+    if (!t) return;
+    b = Number(t.dataset.val);
+    setToggle(bToggle, b);
+    evalEl.hidden = true;
+    resultEl.hidden = true;
+  });
+
+  garbleBtn.addEventListener('click', async () => {
+    garbleBtn.disabled = true;
+    statusEl.textContent = 'Garbling…';
+
+    wires = {
+      W1_0: randomLabel(), W1_1: randomLabel(),
+      W2_0: randomLabel(), W2_1: randomLabel(),
+      Wout_0: randomLabel(), Wout_1: randomLabel(),
+    };
+    gateId = 'gate-' + Date.now() + '-' + Math.floor(Math.random() * 1e6);
+
+    const result = await garbleAndGate(gateId, wires);
+    table = result.table;
+
+    (document.getElementById('and-w1-0')!).textContent = short(wires.W1_0);
+    (document.getElementById('and-w1-1')!).textContent = short(wires.W1_1);
+    (document.getElementById('and-w2-0')!).textContent = short(wires.W2_0);
+    (document.getElementById('and-w2-1')!).textContent = short(wires.W2_1);
+    (document.getElementById('and-wout-0')!).textContent = short(wires.Wout_0);
+    (document.getElementById('and-wout-1')!).textContent = short(wires.Wout_1);
+
+    rowsEl.innerHTML = result.rows
+      .map((r: any) => `<div class="garble-row"><code>a=${r.a} b=${r.b}</code> → Encrypt(k₁=${short(r.k1, 8)}…, k₂=${short(r.k2, 8)}…, out=${short(r.outLabel, 8)}…) = <code>${short(r.ciphertext, 12)}</code></div>`)
+      .join('');
+
+    tableEl.innerHTML =
+      '<tr><th>#</th><th>ciphertext (shuffled — no longer tied to any visible (a,b))</th></tr>' +
+      table.map((c, i) => `<tr><td>${i}</td><td><code>${short(c, 32)}</code></td></tr>`).join('');
+
+    labelsEl.hidden = false;
+    inputsEl.hidden = false;
+    evalEl.hidden = true;
+    resultEl.hidden = true;
+    statusEl.textContent = 'Gate garbled — pick input bits and evaluate.';
+    garbleBtn.disabled = false;
+  });
+
+  evaluateBtn.addEventListener('click', async () => {
+    if (!wires) return;
+    const L1 = a === 0 ? wires.W1_0 : wires.W1_1;
+    const L2 = b === 0 ? wires.W2_0 : wires.W2_1;
+
+    const { attempts, matchIndex, outputLabel } = await evaluateAndGate(gateId, L1, L2, table);
+
+    attemptsEl.innerHTML = attempts
+      .map((att: any) => {
+        const isMatch = att.index === matchIndex;
+        return `<div class="eval-attempt ${isMatch ? 'match' : ''}">
+          <code>row ${att.index}</code> → tail = <code>${toHex(att.check)}</code>
+          ${isMatch ? ' <span class="demo-check ok">✓ zero — this is it</span>' : ' <span class="demo-hint">nonzero, discard</span>'}
+        </div>`;
+      })
+      .join('');
+
+    evalEl.hidden = false;
+
+    if (outputLabel && matchIndex !== -1) {
+      const decodedBit = labelsEqual(outputLabel, wires.Wout_1) ? 1 : 0;
+      const expected = a & b;
+      const ok = decodedBit === expected;
+      resultCheckEl.textContent = ok
+        ? `✓ recovered output label matches Wₒᵤₜ${decodedBit} — decoded bit = ${decodedBit}, matches ${a} AND ${b} = ${expected}`
+        : `✗ mismatch (should never happen)`;
+      resultCheckEl.className = `demo-check ${ok ? 'ok' : 'bad'}`;
+    } else {
+      resultCheckEl.textContent = '✗ no zero-tail row found (should never happen)';
+      resultCheckEl.className = 'demo-check bad';
+    }
+    resultEl.hidden = false;
+  });
+</script>
+
+<style>
+  .label-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+    gap: 0.5rem 1rem;
+    font-family: var(--font-mono);
+    font-size: 0.85rem;
+  }
+  .label-grid > div {
+    display: flex;
+    gap: 0.5rem;
+    align-items: baseline;
+  }
+  .label-name {
+    font-family: var(--font-sans);
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    min-width: 3.5rem;
+  }
+  .garble-row {
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    padding: 0.35em 0;
+    border-bottom: 1px dashed var(--border);
+    word-break: break-all;
+  }
+  .garbled-table {
+    width: 100%;
+    margin-top: 0.75rem;
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+  }
+  .garbled-table td,
+  .garbled-table th {
+    word-break: break-all;
+  }
+  .bit-picker-row {
+    display: flex;
+    align-items: center;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+  }
+  .bit-picker {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    color: var(--text-muted);
+  }
+  .eval-attempt {
+    font-family: var(--font-mono);
+    font-size: 0.8rem;
+    padding: 0.4em 0;
+    border-bottom: 1px dashed var(--border);
+    word-break: break-all;
+  }
+  .eval-attempt.match {
+    color: var(--ok);
+  }
+</style>

@@ -4,6 +4,8 @@ title: Garbled circuits, explained
 description: A plain-spoken, working explanation of Yao's garbled circuits — the technique behind secure two-party computation, from private auctions to MPC wallets.
 ---
 
+import AndGateDemo from '../components/AndGateDemo.astro';
+
 # Two people compute a function of secrets — without showing each other the secrets
 
 A **garbled circuit** lets two parties jointly compute the output of a function
@@ -20,5 +22,9 @@ either revealing their net worth — or go straight to [the exact construction](
 wire labels, the encryption scheme for a garbled table, and how evaluation
 recovers the right answer without ever seeing a wrong one.
 
-An interactive demo — garbling and evaluating a real AND gate step by step, live
-in your browser — is coming in the next phase of this site.
+Try it right here — garble a real AND gate and evaluate it, live:
+
+<AndGateDemo />
+
+More on [Interactive](/interactive), including why nothing about a label or a
+shuffled ciphertext's position reveals what it corresponds to.
