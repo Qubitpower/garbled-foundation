@@ -1,0 +1,24 @@
+---
+layout: ../layouts/Layout.astro
+title: Garbled circuits, explained
+description: A plain-spoken, working explanation of Yao's garbled circuits — the technique behind secure two-party computation, from private auctions to MPC wallets.
+---
+
+# Two people compute a function of secrets — without showing each other the secrets
+
+A **garbled circuit** lets two parties jointly compute the output of a function
+over their own private inputs, while learning nothing about each other's input
+beyond what the output itself reveals. Not "we trust a server with both values" —
+neither party ever sees the other's data, encrypted or otherwise. The technique
+is Andrew Yao's: write the function as a circuit of logic gates, have one party
+**garble** every gate into an encrypted table, and have the other **evaluate**
+that table wire by wire without ever decrypting an input in the clear.
+
+Read [what garbled circuits actually are](/what-are-garbled-circuits) for the
+motivating problem — two millionaires who want to know who's richer without
+either revealing their net worth — or go straight to [the exact construction](/how-it-works):
+wire labels, the encryption scheme for a garbled table, and how evaluation
+recovers the right answer without ever seeing a wrong one.
+
+An interactive demo — garbling and evaluating a real AND gate step by step, live
+in your browser — is coming in the next phase of this site.

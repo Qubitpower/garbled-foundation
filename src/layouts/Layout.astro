@@ -1,0 +1,94 @@
+---
+import '../styles/global.css';
+import 'katex/dist/katex.min.css';
+import Nav from '../components/Nav.astro';
+
+interface Props {
+  frontmatter: {
+    title: string;
+    description: string;
+  };
+}
+
+const { title, description } = Astro.props.frontmatter;
+const canonicalURL = new URL(Astro.url.pathname, Astro.site);
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title} · Garbled Foundation</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonicalURL} />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <script is:inline>
+      // Applied before paint to avoid a light/dark flash.
+      const theme = localStorage.getItem('garbled-theme');
+      if (theme) document.documentElement.setAttribute('data-theme', theme);
+    </script>
+  </head>
+  <body>
+    <Nav />
+    <main>
+      <div class="content">
+        <slot />
+      </div>
+    </main>
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <div class="site-footer-row">
+          <span>Garbled Foundation — text CC-BY, code MIT.</span>
+          <a href="https://github.com/Qubitpower/garbled-foundation">Source on GitHub</a>
+        </div>
+        <div class="site-footer-row site-footer-network">
+          <span>Part of the Foundation network:</span>
+          <a href="https://pedersen.foundation">Pedersen Foundation</a>
+        </div>
+      </div>
+    </footer>
+  </body>
+</html>
+
+<style>
+  main {
+    display: flex;
+    justify-content: center;
+    padding: 3rem 1.25rem 4rem;
+  }
+  .content {
+    width: 100%;
+    max-width: var(--measure);
+  }
+  .site-footer {
+    border-top: 1px solid var(--border);
+  }
+  .site-footer-inner {
+    max-width: 78rem;
+    margin: 0 auto;
+    padding: 1.5rem 1.25rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    color: var(--text-muted);
+  }
+  .site-footer-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+  }
+  .site-footer-network {
+    gap: 0.5rem;
+  }
+  .site-footer-inner a {
+    color: var(--text-muted);
+  }
+</style>

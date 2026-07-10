@@ -1,0 +1,131 @@
+---
+const { pathname } = Astro.url;
+
+const links = [
+  { href: '/what-are-garbled-circuits', label: 'What are garbled circuits' },
+  { href: '/how-it-works', label: 'How it works' },
+  { href: '/interactive', label: 'Interactive', soon: true },
+  { href: '/history', label: 'History', soon: true },
+  { href: '/code', label: 'Code', soon: true },
+  { href: '/applications', label: 'Applications', soon: true },
+  { href: '/glossary', label: 'Glossary', soon: true },
+  { href: '/further-reading', label: 'Further reading', soon: true },
+  { href: '/about', label: 'About', soon: true },
+];
+---
+
+<header class="site-header">
+  <div class="site-header-inner">
+    <a class="brand" href="/">Garbled Foundation</a>
+    <nav aria-label="Primary">
+      <ul>
+        {links.map((link) => (
+          <li>
+            {link.soon ? (
+              <span class="soon" title="Coming soon">{link.label}</span>
+            ) : (
+              <a href={link.href} aria-current={pathname === link.href ? 'page' : undefined}>
+                {link.label}
+              </a>
+            )}
+          </li>
+        ))}
+      </ul>
+    </nav>
+    <button id="theme-toggle" type="button" aria-label="Toggle color theme">
+      <span aria-hidden="true">◐</span>
+    </button>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    border-bottom: 1px solid var(--border);
+    background: var(--bg);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .site-header-inner {
+    max-width: 78rem;
+    margin: 0 auto;
+    padding: 0.9rem 1.25rem;
+    display: flex;
+    align-items: center;
+    gap: 1.25rem;
+  }
+  .brand {
+    font-family: var(--font-sans);
+    font-weight: 700;
+    font-size: 1rem;
+    color: var(--text);
+    text-decoration: none;
+    white-space: nowrap;
+  }
+  nav {
+    flex: 1;
+    overflow-x: auto;
+    /* Hint that the nav scrolls horizontally on narrow viewports. */
+    mask-image: linear-gradient(to right, black calc(100% - 1.5rem), transparent);
+  }
+  nav ul {
+    list-style: none;
+    display: flex;
+    gap: 1rem;
+    margin: 0;
+    padding: 0;
+    font-family: var(--font-sans);
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+  nav a {
+    color: var(--text-muted);
+    text-decoration: none;
+  }
+  nav a:hover,
+  nav a[aria-current='page'] {
+    color: var(--text);
+  }
+  nav .soon {
+    color: var(--text-muted);
+    opacity: 0.45;
+    cursor: default;
+  }
+  #theme-toggle {
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 0.4em;
+    width: 2rem;
+    height: 2rem;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    color: var(--text-muted);
+    flex-shrink: 0;
+  }
+  #theme-toggle:hover {
+    color: var(--text);
+    border-color: var(--text-muted);
+  }
+</style>
+
+<script>
+  const KEY = 'garbled-theme';
+  const root = document.documentElement;
+  const button = document.getElementById('theme-toggle');
+
+  function apply(theme: string | null) {
+    if (theme) root.setAttribute('data-theme', theme);
+    else root.removeAttribute('data-theme');
+  }
+
+  apply(localStorage.getItem(KEY));
+
+  button?.addEventListener('click', () => {
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const current = root.getAttribute('data-theme') || (prefersDark ? 'dark' : 'light');
+    const next = current === 'dark' ? 'light' : 'dark';
+    localStorage.setItem(KEY, next);
+    apply(next);
+  });
+</script>

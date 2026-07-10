@@ -1,0 +1,12 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "garbled-foundation",
+  "compatibility_date": "2026-07-11",
+  "assets": {
+    "directory": "./dist"
+  }
+  // Domain garbled.foundation is not yet purchased (still listed for sale
+  // via digitaldomains.market/Sedo). Once it's on this Cloudflare account,
+  // add the custom_domain routes here — see pedersen-foundation's
+  // wrangler.jsonc for the exact shape.
+}

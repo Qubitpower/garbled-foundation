@@ -1,0 +1,126 @@
+---
+layout: ../layouts/Layout.astro
+title: How it works
+description: Wire labels, the exact garbled-table encryption scheme, evaluation, and an honest account of why the demo on this site skips Oblivious Transfer.
+---
+
+# How it works
+
+This page walks through exactly how a single garbled gate is built and
+evaluated — the same construction an interactive AND-gate demo (coming to this
+site's `/interactive` page in the next phase) will run live, in your browser.
+
+## Wire labels
+
+Every wire in the circuit — every input, every intermediate value, every output
+— gets **two random 128-bit labels**, one representing 0 and one representing 1:
+
+$$
+W^0, \quad W^1 \in \{0,1\}^{128}
+$$
+
+generated with a cryptographically secure random source (`crypto.getRandomValues`
+in the browser). Critically, a label carries no visible meaning — `W^0` and
+`W^1` are two unrelated random 128-bit strings. Nothing about their bit pattern
+reveals which one represents 0 and which represents 1. That's what makes the
+garbled table safe to hand over: whoever holds a label knows *a* value flowed
+down that wire, but not *which* one, unless they can decrypt something with it.
+
+## Garbling a gate
+
+Take a single two-input gate — say AND — with input wires carrying labels
+$(W_1^0, W_1^1)$ and $(W_2^0, W_2^1)$, and an output wire with labels $(W_{out}^0,
+W_{out}^1)$. The Garbler needs to produce a table that lets someone holding the
+*correct pair* of input labels recover the *correct* output label — and nothing
+else.
+
+For a pair of input labels $k_1, k_2$ and this gate's identifier $\text{gate\_id}$,
+define a 256-bit keystream:
+
+$$
+\text{keystream} = \text{SHA-256}(k_1 \Vert k_2 \Vert \text{gate\_id} \Vert \texttt{"0"}) \;\Vert\; \text{SHA-256}(k_1 \Vert k_2 \Vert \text{gate\_id} \Vert \texttt{"1"})
+$$
+
+(two SHA-256 outputs concatenated, since one 256-bit hash call only gives 32
+bytes and we want a keystream at least that long — this is the standard trick of
+expanding a hash into more pseudorandom bytes by hashing a counter or tag
+alongside it, the same idea used elsewhere on this site's [sibling project's
+hash-to-field construction](https://pedersen.foundation/pedersen-commitments)).
+
+To encrypt one cell of the table — the one for this specific $(k_1, k_2)$ input
+combination — pad the correct output label with 128 zero bits and XOR:
+
+$$
+\text{ciphertext} = \text{keystream} \oplus (\text{label} \,\Vert\, 0^{128})
+$$
+
+The Garbler does this once for **each of the 4 rows** of the gate's truth table
+(00, 01, 10, 11), each time using the input labels for that row and the output
+label the gate's actual logic (AND, in this case) says that row should produce.
+That gives 4 ciphertexts. The Garbler **shuffles them into random order** — this
+is what makes the table "garbled" rather than just "encrypted": without knowing
+which row is which, an Evaluator can't learn anything from a cell's *position* in
+the table either.
+
+## Evaluating a gate
+
+The Evaluator holds exactly one label per input wire — $L_1$ for the first
+input, $L_2$ for the second — and the 4 shuffled ciphertexts. They compute the
+*same* keystream formula using their own two labels, then XOR it against each of
+the 4 ciphertexts in turn:
+
+$$
+\text{plaintext}_i = \text{keystream}(L_1, L_2) \oplus \text{ciphertext}_i, \qquad i = 1,2,3,4
+$$
+
+Exactly one of the four results will have its **last 128 bits equal to zero** —
+that's how the Evaluator recognizes the row that was actually encrypted under
+their specific $(L_1, L_2)$ pair. The **first 128 bits of that result are the
+correct output label.** The other three attempts decrypt to effectively random
+128-bit garbage (since they were encrypted under a different key), and the odds
+of one of those accidentally having 128 zero bits by chance are astronomically
+small — this "check for zero" step is a lightweight authenticity check, not
+just a lucky guess.
+
+Chain this across every gate in a circuit, feeding each gate's output label into
+the next gate as an input label, and by the time you reach the circuit's output
+wires, the Evaluator holds output labels — which get mapped back to actual bits
+via a small public lookup table the Garbler provides for just the output wires
+(there's no privacy to preserve on the final answer, that's the whole point).
+
+## What this demo leaves out: Oblivious Transfer
+
+There's a piece of the real protocol that this site's demo does **not**
+implement, and it's worth being upfront about exactly why.
+
+In an actual two-party run, the Evaluator needs a label for each of *their own*
+private input wires — but getting it isn't as simple as the Garbler just handing
+it over. The Garbler must not learn which of the Evaluator's input bits is 0 and
+which is 1 (that would leak the Evaluator's private input), and the Evaluator
+must not receive *both* labels for any wire (that would let them evaluate the
+gate under both possible inputs and learn more than the single output bit they're
+entitled to). The real protocol solves this with **Oblivious Transfer (OT)**: a
+cryptographic primitive where the Garbler offers both labels, the Evaluator
+picks up exactly one — the one matching their real input bit — and the Garbler
+never learns which one was taken.
+
+The demo on this site runs entirely inside **one browser tab**, playing both
+roles itself, with no second untrusted party and no network in between. There is
+nothing to hide from anyone in that setup, so the demo simply hands over the
+correct label directly instead of running an OT protocol to fetch it. That's a
+legitimate simplification for a teaching tool, but it would be a **critical
+security hole** in a real two-party protocol — this page and the site's glossary
+(coming soon) call it out explicitly so the omission doesn't quietly read as "OT
+isn't needed."
+
+An interactive AND-gate demo — watching every step (labels, table, shuffling,
+evaluation, and the zero-check) happen live — is coming to this site's
+`/interactive` page in the next phase.
+
+---
+
+**Sources:** the garbling and evaluation scheme above is the standard
+textbook/point-and-permute-free construction of Yao's garbled circuits. A
+History page with the original papers, and a Further Reading page with deeper
+treatments of the later free-XOR and half-gates optimizations this simple
+version doesn't use, are both coming in a later phase of this site.

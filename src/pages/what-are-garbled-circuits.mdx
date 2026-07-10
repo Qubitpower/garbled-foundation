@@ -1,0 +1,62 @@
+---
+layout: ../layouts/Layout.astro
+title: What are garbled circuits
+description: Secure two-party computation, the two-millionaires problem, and the Garbler/Evaluator roles that make garbled circuits work.
+---
+
+# What are garbled circuits
+
+Two people want to compute a function of their private data — without either one
+revealing that data to the other, and without a trusted third party in the
+middle. That's **secure two-party computation**, and garbled circuits are one way
+to actually build it.
+
+## The two-millionaires problem
+
+The motivating example, due to Andrew Yao, is disarmingly simple: two
+millionaires want to know who is richer, without either one revealing their net
+worth to the other (or to anyone else). Neither wants to disclose their number —
+just the one-bit answer to "who's bigger."
+
+That might sound like a party trick, but the same shape shows up constantly in
+practice: two companies want to know if they're both already doing business with
+the same client, without disclosing their client lists; two hospitals want to
+check whether a patient shows up in both of their (private) records; two parties
+want to settle who owes whom without opening their books. Any function of two
+private inputs where you want *only the output*, and nothing about the inputs
+beyond what the output implies, is an instance of this problem.
+
+## Garbling a circuit
+
+The approach: write the function as a **boolean circuit** — a network of AND, OR,
+XOR, and NOT gates wired together, the way you'd build any digital logic. Then
+have one party **garble** it: encrypt every gate so that its truth table can be
+evaluated without ever being read in the clear. The other party evaluates the
+garbled circuit, wire by wire, gate by gate, ending up with the final output —
+and nothing else.
+
+The two roles have fixed, asymmetric names:
+
+- **Garbler.** Builds the circuit, encrypts every gate into a garbled table, and
+  hands the whole thing to the Evaluator — along with exactly one "wire label"
+  per input wire, corresponding to their own private input bits.
+- **Evaluator.** Receives the garbled circuit and the Garbler's wire labels,
+  supplies wire labels for their own private input bits (obtained without
+  revealing which bit they correspond to — see the note on Oblivious Transfer on
+  [how it works](/how-it-works)), and evaluates the whole circuit gate by gate to
+  get the final output.
+
+Neither party learns the other's input. The Garbler never sees the circuit
+being evaluated — the Evaluator does that alone, on encrypted tables. The
+Evaluator never sees the Garbler's real input bits — only opaque labels that
+happen to correspond to them. [How it works](/how-it-works) covers exactly how
+a single gate gets garbled and evaluated, with the real formulas.
+
+---
+
+**Sources:** A. C. Yao, "Protocols for Secure Computations," 23rd Annual
+Symposium on Foundations of Computer Science (FOCS 1982, Chicago), pp. 160–164 —
+the paper that poses secure two-party computation and the two-millionaires
+problem. A History page with the fuller timeline, including how the
+garbled-circuit protocol itself was first shown four years later, is coming in
+a later phase of this site.
