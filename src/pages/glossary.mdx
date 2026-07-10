@@ -1,0 +1,85 @@
+---
+layout: ../layouts/Layout.astro
+title: Glossary
+description: Plain-language definitions for the terms used across this site — garbler, evaluator, garbled table, wire label, Oblivious Transfer, boolean circuit, semi-honest vs malicious security.
+---
+
+# Glossary
+
+Short, plain-language definitions for terms used elsewhere on this site. Each
+links back to the page where it's explained in more depth.
+
+### Boolean circuit
+
+A function written as a network of AND, OR, XOR, and NOT logic gates wired
+together — the same representation digital hardware uses. Garbled circuits
+work on a function once it's been expressed this way; see [what garbled
+circuits are](/what-are-garbled-circuits).
+
+### Evaluator
+
+The party in a garbled-circuit protocol who receives the garbled tables and a
+set of wire labels, and computes the circuit gate by gate to reach the output —
+without ever seeing a plaintext 0 or 1 for any wire in between. See [what
+garbled circuits are](/what-are-garbled-circuits#garbling-a-circuit) for the
+Evaluator's role, and [how it works](/how-it-works#evaluating-a-gate) for
+exactly how a single gate gets evaluated.
+
+### Garbled table
+
+The encrypted version of a single gate's truth table — four ciphertexts (for a
+two-input gate), one per input combination, shuffled into random order so that
+position reveals nothing either. Built by the [Garbler](#garbler); consumed by
+the [Evaluator](#evaluator). See [how it works](/how-it-works#garbling-a-gate)
+for the exact construction.
+
+### Garbler
+
+The party in a garbled-circuit protocol who builds the circuit, generates wire
+labels, encrypts every gate into a [garbled table](#garbled-table), and hands
+the whole thing to the [Evaluator](#evaluator). See [what garbled circuits
+are](/what-are-garbled-circuits#garbling-a-circuit).
+
+### Malicious security
+
+A security model where a protocol must remain safe even if a corrupted party
+actively deviates from the protocol — lying about inputs, sending malformed
+messages, aborting early to leak information, and so on. Stronger (and
+generally more expensive) than [semi-honest security](#semi-honest-security).
+The construction on this site is analyzed only in the semi-honest model.
+
+### Oblivious Transfer (OT)
+
+A cryptographic primitive where a sender offers two values and a receiver picks
+up exactly one of their choosing — the sender never learns which one was
+picked, and the receiver never sees the other one. In a real garbled-circuit
+protocol, OT is how the Evaluator obtains the correct [wire
+label](#wire-label) for each of their own private input bits, without
+revealing that bit to the Garbler. The demo on this site's
+[Interactive](/interactive) page **skips OT** — see [how it
+works](/how-it-works#what-this-demo-leaves-out-oblivious-transfer) for exactly
+why that's a legitimate simplification there but would be a critical security
+hole in a real two-party protocol.
+
+### Semi-honest security
+
+A security model (also called "honest-but-curious") where every party is
+assumed to follow the protocol exactly as specified, but may try to learn
+extra information from whatever messages they legitimately receive. Weaker
+than [malicious security](#malicious-security), but simpler to achieve and
+the standard starting point for understanding a protocol — including the one
+on this site.
+
+### Wire label
+
+A random 128-bit value assigned to one possible value (0 or 1) of one wire in
+a circuit. Every wire gets two labels, one per bit value, and — critically —
+nothing about a label's bit pattern reveals which value it represents. See
+[how it works](/how-it-works#wire-labels) for exactly how labels are generated
+and used.
+
+---
+
+**Sources:** these are standard definitions used consistently across the
+secure-computation literature; see [History](/history) for citations to the
+original papers that introduced several of these concepts.

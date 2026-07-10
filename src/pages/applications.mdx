@@ -1,0 +1,74 @@
+---
+layout: ../layouts/Layout.astro
+title: Applications
+description: Where garbled circuits and secure computation actually get used — the Danish sugar beet auction, private set intersection, and MPC wallets — with real sources and honest caveats about which technique is which.
+---
+
+# Applications
+
+Secure two-party and multi-party computation isn't just an academic exercise —
+it's run real auctions and protects real money. But the field is broader than
+just garbled circuits, and it's easy to blur "MPC" (the general goal) with
+"garbled circuits" (one specific technique for two-party MPC). This page keeps
+that distinction explicit for each example.
+
+## The Danish sugar beet auction (2008)
+
+In January 2008, roughly 1,200 Danish sugar beet farmers took part in the
+**first large-scale, practical real-world use of secure multi-party
+computation**. EU sugar-market reforms had cut subsidies and prices, and one
+of Danisco's processing plants had closed — so Denmark needed a way to
+reallocate sugar beet production contracts efficiently nationwide. An
+electronic double auction, run jointly by Danisco (the country's only sugar
+beet processor), the Danish sugar beet growers' association, and a research
+team, computed the market-clearing price without any farmer's individual bid
+ever being revealed to anyone — including the auction operators. The
+computation itself took about half an hour.
+
+**Important caveat:** this MPC deployment used **secret-sharing-based
+multi-party computation** (Damgård and Toft), not garbled circuits — garbled
+circuits are inherently a *two*-party technique in their basic form, and this
+was a many-party auction among a much larger group. It's the right example for
+"MPC works, in production, at scale" — just not a garbled-circuits example
+specifically.
+
+## Private set intersection
+
+Two parties each hold a set of items — say, customer lists — and want to know
+which items appear in *both* sets, without revealing anything else about
+either set. This is one of the most-studied applications actually built with
+**generic garbled-circuit protocols directly**: Huang, Evans, and Katz's
+*"Private Set Intersection: Are Garbled Circuits Better than Custom
+Protocols?"* (NDSS 2012) showed that a garbled-circuit-based PSI protocol
+scales to million-element sets and is often competitive with — or simpler to
+integrate than — protocols purpose-built for PSI. Real deployments include
+finding customer overlap between companies without either side handing over
+its customer list, and privacy-preserving contact-tracing-style intersection
+checks that reveal only whether an overlap exists above some threshold, not
+which items overlap.
+
+## MPC wallets
+
+By the mid-2020s, **MPC wallets** became a standard way to secure
+cryptocurrency: instead of one private key sitting on one device, the key is
+split into shares held by separate parties (people, servers, hardware). A
+transaction gets signed only when enough shares cooperate through an MPC
+protocol — at no point does the full private key exist assembled on any single
+device. Custody providers like Fireblocks popularized this model for
+institutional crypto custody.
+
+**Important caveat, same shape as the sugar beet auction:** production MPC
+wallets are almost always built on **threshold-signature protocols** —
+running MPC directly over the arithmetic of ECDSA or EdDSA signing — not on
+garbled circuits. It's a real, deployed application of the broader idea this
+site is about (jointly computing something without any party seeing the whole
+secret), worth knowing about for that reason, but it isn't an example of the
+specific boolean-circuit-garbling technique covered on [how it
+works](/how-it-works).
+
+---
+
+**Sources:**
+Damgård & Toft, ["Trading Sugar Beet Quotas — Secure Multiparty Computation in Practice,"](https://ercim-news.ercim.eu/en73/special/trading-sugar-beet-quotas-secure-multiparty-computation-in-practice) ERCIM News No. 73, 2008, pp. 32–33;
+Huang, Evans, Katz, ["Private Set Intersection: Are Garbled Circuits Better than Custom Protocols?"](https://www.cs.virginia.edu/~evans/pubs/ndss2012/) NDSS 2012;
+Fireblocks, ["What is MPC (Multi-Party Computation)?"](https://www.fireblocks.com/report/what-is-mpc).

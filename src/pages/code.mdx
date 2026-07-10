@@ -1,0 +1,273 @@
+---
+layout: ../layouts/Layout.astro
+title: Code
+description: A garbled AND gate — garble, evaluate, and check the zero tail — implemented in Python, JavaScript, and Rust, with line comments. Every sample here has actually been run.
+---
+
+# Code
+
+The same construction from [how it works](/how-it-works) — garble a single AND
+gate, then evaluate it — implemented in Python, JavaScript, and Rust. Every
+sample on this page has actually been run and checked for a correct
+garble → evaluate roundtrip across hundreds of trials; none of this is
+pseudocode.
+
+A note on the keystream formula: each `SHA-256(...)` call natively outputs 256
+bits, but the construction on [how it works](/how-it-works) needs a 256-bit
+keystream *total* from concatenating two of them — so each half is truncated
+to its first 128 bits before concatenating. All three samples below do this
+the same way.
+
+## Python
+
+No third-party dependencies — just `hashlib` and `secrets` from the standard
+library.
+
+```python
+import hashlib
+import secrets
+
+def random_label() -> bytes:
+    """A 128-bit wire label."""
+    return secrets.token_bytes(16)
+
+def sha256(data: bytes) -> bytes:
+    return hashlib.sha256(data).digest()
+
+def keystream(k1: bytes, k2: bytes, gate_id: str) -> bytes:
+    """32 bytes: first 16 bytes of SHA256(...‖'0'), then first 16 of SHA256(...‖'1')."""
+    gid = gate_id.encode()
+    h0 = sha256(k1 + k2 + gid + b"0")[:16]
+    h1 = sha256(k1 + k2 + gid + b"1")[:16]
+    return h0 + h1
+
+def xor(a: bytes, b: bytes) -> bytes:
+    return bytes(x ^ y for x, y in zip(a, b))
+
+def encrypt_cell(k1: bytes, k2: bytes, gate_id: str, label: bytes) -> bytes:
+    """ciphertext = keystream XOR (label ‖ 128 zero bits)"""
+    ks = keystream(k1, k2, gate_id)
+    plaintext = label + b"\x00" * 16
+    return xor(ks, plaintext)
+
+def garble_and_gate(gate_id, W1_0, W1_1, W2_0, W2_1, Wout_0, Wout_1):
+    # AND truth table: only (1,1) produces the "1" output label.
+    rows = [
+        (W1_0, W2_0, Wout_0),
+        (W1_0, W2_1, Wout_0),
+        (W1_1, W2_0, Wout_0),
+        (W1_1, W2_1, Wout_1),
+    ]
+    table = [encrypt_cell(k1, k2, gate_id, out) for (k1, k2, out) in rows]
+    secrets.SystemRandom().shuffle(table)  # position must leak nothing
+    return table
+
+def evaluate(gate_id, L1, L2, table):
+    """Try every row; the one with a zero tail is the real one."""
+    ks = keystream(L1, L2, gate_id)
+    for ciphertext in table:
+        plaintext = xor(ks, ciphertext)
+        label, check = plaintext[:16], plaintext[16:]
+        if check == b"\x00" * 16:
+            return label
+    return None  # never happens for a correctly garbled gate
+
+# --- usage ---
+gate_id = "gate-1"
+W1_0, W1_1 = random_label(), random_label()
+W2_0, W2_1 = random_label(), random_label()
+Wout_0, Wout_1 = random_label(), random_label()
+
+table = garble_and_gate(gate_id, W1_0, W1_1, W2_0, W2_1, Wout_0, Wout_1)
+
+# Evaluate for a=1, b=1 — should recover Wout_1
+result = evaluate(gate_id, W1_1, W2_1, table)
+assert result == Wout_1
+```
+
+## JavaScript
+
+This is the same implementation running live in the demo on this site — see
+[`src/lib/garbled-and.js`](https://github.com/Qubitpower/garbled-foundation/blob/main/src/lib/garbled-and.js)
+in the site's own repository. Uses only the browser's built-in Web Crypto API
+— no dependencies.
+
+```javascript
+function randomLabel() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return bytes;
+}
+
+async function sha256(bytes) {
+  return new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
+}
+
+function xorBytes(a, b) {
+  const out = new Uint8Array(a.length);
+  for (let i = 0; i < a.length; i++) out[i] = a[i] ^ b[i];
+  return out;
+}
+
+// keystream: first 16 bytes of SHA256(...‖"0"), then first 16 of SHA256(...‖"1")
+async function keystream(k1, k2, gateId) {
+  const enc = new TextEncoder();
+  const gidBytes = enc.encode(gateId);
+  const h0 = await sha256(new Uint8Array([...k1, ...k2, ...gidBytes, ...enc.encode('0')]));
+  const h1 = await sha256(new Uint8Array([...k1, ...k2, ...gidBytes, ...enc.encode('1')]));
+  return new Uint8Array([...h0.slice(0, 16), ...h1.slice(0, 16)]);
+}
+
+// ciphertext = keystream XOR (label ‖ 128 zero bits)
+async function encryptCell(k1, k2, gateId, label) {
+  const ks = await keystream(k1, k2, gateId);
+  const plaintext = new Uint8Array([...label, ...new Uint8Array(16)]);
+  return xorBytes(ks, plaintext);
+}
+
+async function garbleAndGate(gateId, wires) {
+  const { W1_0, W1_1, W2_0, W2_1, Wout_0, Wout_1 } = wires;
+  const rows = [
+    [W1_0, W2_0, Wout_0],
+    [W1_0, W2_1, Wout_0],
+    [W1_1, W2_0, Wout_0],
+    [W1_1, W2_1, Wout_1],
+  ];
+  const table = [];
+  for (const [k1, k2, out] of rows) table.push(await encryptCell(k1, k2, gateId, out));
+  for (let i = table.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [table[i], table[j]] = [table[j], table[i]];
+  }
+  return table;
+}
+
+async function evaluate(gateId, L1, L2, table) {
+  const ks = await keystream(L1, L2, gateId);
+  for (const ciphertext of table) {
+    const plaintext = xorBytes(ks, ciphertext);
+    const label = plaintext.slice(0, 16);
+    const check = plaintext.slice(16, 32);
+    if (check.every((b) => b === 0)) return label;
+  }
+  return null;
+}
+```
+
+## Rust
+
+Uses [`sha2`](https://docs.rs/sha2) for hashing and [`rand`](https://docs.rs/rand)
+for randomness.
+
+```rust
+use rand::RngCore;
+use sha2::{Digest, Sha256};
+
+fn random_label() -> [u8; 16] {
+    let mut b = [0u8; 16];
+    rand::thread_rng().fill_bytes(&mut b);
+    b
+}
+
+fn xor32(a: &[u8; 32], b: &[u8; 32]) -> [u8; 32] {
+    let mut out = [0u8; 32];
+    for i in 0..32 {
+        out[i] = a[i] ^ b[i];
+    }
+    out
+}
+
+/// keystream = SHA256(k1‖k2‖gate_id‖"0")[..16] ‖ SHA256(k1‖k2‖gate_id‖"1")[..16]
+fn keystream(k1: &[u8; 16], k2: &[u8; 16], gate_id: &str) -> [u8; 32] {
+    let mut h0 = Sha256::new();
+    h0.update(k1);
+    h0.update(k2);
+    h0.update(gate_id.as_bytes());
+    h0.update(b"0");
+    let d0 = h0.finalize();
+
+    let mut h1 = Sha256::new();
+    h1.update(k1);
+    h1.update(k2);
+    h1.update(gate_id.as_bytes());
+    h1.update(b"1");
+    let d1 = h1.finalize();
+
+    let mut out = [0u8; 32];
+    out[..16].copy_from_slice(&d0[..16]);
+    out[16..].copy_from_slice(&d1[..16]);
+    out
+}
+
+// ciphertext = keystream ⊕ (label ‖ 128 zero bits)
+fn encrypt_cell(k1: &[u8; 16], k2: &[u8; 16], gate_id: &str, label: &[u8; 16]) -> [u8; 32] {
+    let ks = keystream(k1, k2, gate_id);
+    let mut plaintext = [0u8; 32];
+    plaintext[..16].copy_from_slice(label);
+    xor32(&ks, &plaintext)
+}
+
+struct Wires {
+    w1_0: [u8; 16], w1_1: [u8; 16],
+    w2_0: [u8; 16], w2_1: [u8; 16],
+    wout_0: [u8; 16], wout_1: [u8; 16],
+}
+
+fn garble_and_gate(gate_id: &str, w: &Wires) -> Vec<[u8; 32]> {
+    // AND truth table: only (1,1) produces the "1" output label.
+    let rows = [
+        (&w.w1_0, &w.w2_0, &w.wout_0),
+        (&w.w1_0, &w.w2_1, &w.wout_0),
+        (&w.w1_1, &w.w2_0, &w.wout_0),
+        (&w.w1_1, &w.w2_1, &w.wout_1),
+    ];
+    let mut table: Vec<[u8; 32]> = rows
+        .iter()
+        .map(|(k1, k2, out)| encrypt_cell(k1, k2, gate_id, out))
+        .collect();
+
+    // Fisher-Yates shuffle — position must leak nothing.
+    let mut rng = rand::thread_rng();
+    for i in (1..table.len()).rev() {
+        let j = (rng.next_u32() as usize) % (i + 1);
+        table.swap(i, j);
+    }
+    table
+}
+
+/// Try every row; the one with a zero tail is the real one.
+fn evaluate(gate_id: &str, l1: &[u8; 16], l2: &[u8; 16], table: &[[u8; 32]]) -> Option<[u8; 16]> {
+    let ks = keystream(l1, l2, gate_id);
+    for ciphertext in table {
+        let plaintext = xor32(&ks, ciphertext);
+        let (label, check) = plaintext.split_at(16);
+        if check.iter().all(|&b| b == 0) {
+            let mut out = [0u8; 16];
+            out.copy_from_slice(label);
+            return Some(out);
+        }
+    }
+    None // never happens for a correctly garbled gate
+}
+
+fn main() {
+    let gate_id = "gate-1";
+    let w = Wires {
+        w1_0: random_label(), w1_1: random_label(),
+        w2_0: random_label(), w2_1: random_label(),
+        wout_0: random_label(), wout_1: random_label(),
+    };
+
+    let table = garble_and_gate(gate_id, &w);
+
+    // Evaluate for a=1, b=1 — should recover wout_1.
+    let result = evaluate(gate_id, &w.w1_1, &w.w2_1, &table);
+    assert_eq!(result, Some(w.wout_1));
+}
+```
+
+---
+
+**Sources:** implements the construction derived on [how it
+works](/how-it-works). Python samples use only the standard library; the Rust
+sample uses [`sha2`](https://docs.rs/sha2) and [`rand`](https://docs.rs/rand).

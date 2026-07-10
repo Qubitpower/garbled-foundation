@@ -5,12 +5,12 @@ const links = [
   { href: '/what-are-garbled-circuits', label: 'What are garbled circuits' },
   { href: '/how-it-works', label: 'How it works' },
   { href: '/interactive', label: 'Interactive' },
-  { href: '/history', label: 'History', soon: true },
-  { href: '/code', label: 'Code', soon: true },
-  { href: '/applications', label: 'Applications', soon: true },
-  { href: '/glossary', label: 'Glossary', soon: true },
-  { href: '/further-reading', label: 'Further reading', soon: true },
-  { href: '/about', label: 'About', soon: true },
+  { href: '/history', label: 'History' },
+  { href: '/code', label: 'Code' },
+  { href: '/applications', label: 'Applications' },
+  { href: '/glossary', label: 'Glossary' },
+  { href: '/further-reading', label: 'Further reading' },
+  { href: '/about', label: 'About' },
 ];
 ---
 
@@ -21,13 +21,9 @@ const links = [
       <ul>
         {links.map((link) => (
           <li>
-            {link.soon ? (
-              <span class="soon" title="Coming soon">{link.label}</span>
-            ) : (
-              <a href={link.href} aria-current={pathname === link.href ? 'page' : undefined}>
-                {link.label}
-              </a>
-            )}
+            <a href={link.href} aria-current={pathname === link.href ? 'page' : undefined}>
+              {link.label}
+            </a>
           </li>
         ))}
       </ul>
@@ -85,11 +81,6 @@ const links = [
   nav a:hover,
   nav a[aria-current='page'] {
     color: var(--text);
-  }
-  nav .soon {
-    color: var(--text-muted);
-    opacity: 0.45;
-    cursor: default;
   }
   #theme-toggle {
     background: none;

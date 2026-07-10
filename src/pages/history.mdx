@@ -1,0 +1,76 @@
+---
+layout: ../layouts/Layout.astro
+title: History
+description: From Yao's 1982 two-millionaires problem, through the garbled-circuit protocol he never formally published, to free-XOR and half-gates — each entry sourced to its original paper.
+---
+
+# History
+
+Garbled circuits have an unusual origin story: the technique's inventor never
+actually wrote it down. Here's the timeline, from the problem that motivated it
+to the optimizations still used today.
+
+### 1982 — The two-millionaires problem
+
+Andrew C. Yao poses the general question of **secure two-party computation** —
+can two parties compute a function of their private inputs while learning
+nothing beyond the output? — using the two-millionaires problem as the running
+example: who's richer, without either one disclosing their net worth. *"Protocols
+for Secure Computations,"* 23rd Annual Symposium on Foundations of Computer
+Science (FOCS 1982, Chicago), pp. 160–164. This paper sets up the problem;
+Yao's actual solution — garbled circuits — comes four years later.
+
+### 1986 — Garbled circuits, shown but not published
+
+Yao presents the garbled-circuit protocol itself — the construction this whole
+site is about — but **only orally**, as an example during the talk for his
+paper *"How to Generate and Exchange Secrets,"* 27th Annual Symposium on
+Foundations of Computer Science (FOCS 1986), pp. 162–167. The paper's written
+text doesn't contain the construction; it exists only in what Yao said at the
+podium. This is unusual enough that it's worth stating plainly: **there is no
+original paper to cite for the protocol itself** — only for the talk it was
+attached to.
+
+### 1987 — The first written description
+
+Oded Goldreich, Silvio Micali, and Avi Wigderson publish *"How to Play Any
+Mental Game,"* 19th ACM Symposium on Theory of Computing (STOC 1987),
+pp. 218–229 — a general completeness theorem for multi-party protocols with an
+honest majority. In the course of that broader result, this paper contains the
+**first written description of Yao's garbled-circuit technique**, a year after
+Yao had only shown it verbally. Authorship of the construction itself is
+credited to Yao — Oded Goldreich confirmed this attribution explicitly in
+2003 — even though GMW's paper is the first place it appears on the page.
+
+### 2008 — Free XOR
+
+Vladimir Kolesnikov and Thomas Schneider publish *"Improved Garbled Circuit:
+Free XOR Gates and Applications,"* ICALP 2008, pp. 486–498. Their technique
+arranges wire labels so that **XOR gates can be evaluated with zero
+ciphertexts and zero cryptographic operations** — just XOR-ing labels directly
+— shown secure in the random oracle model. Since real circuits contain a lot of
+XOR gates (e.g. every bit of addition), this cut real-world garbled-circuit
+costs substantially, with reported speedups up to 4x.
+
+### 2015 — Half-gates
+
+Samee Zahur, Mike Rosulek, and David Evans publish *"Two Halves Make a Whole:
+Reducing Data Transfer in Garbled Circuits Using Half Gates,"* EUROCRYPT 2015,
+pp. 220–250. Classic garbling — the four-ciphertext-per-gate form used
+throughout [how it works](/how-it-works) on this site, chosen there for
+clarity — had already been improved for XOR gates (free-XOR, above) and,
+separately, for AND gates down to two ciphertexts, but those two optimizations
+were *incompatible* with each other. Half-gates unified them: splitting an AND
+gate into two "half gates" (each known partially by one party) gets both
+optimizations at once, producing smaller garbled circuits than any prior
+scheme.
+
+---
+
+This list stops at 2015 deliberately: from there the field branches into many
+parallel, still-evolving directions — malicious-security protocols, MPC over
+arithmetic rather than boolean circuits, and production systems like the ones
+covered on [Applications](/applications) — better covered on their own than as
+a thinning tail here.
+
+**Sources:** linked inline above; all citations are to the original papers.

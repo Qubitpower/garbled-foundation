@@ -45,12 +45,19 @@ async function sha256(bytes) {
   return new Uint8Array(await crypto.subtle.digest('SHA-256', bytes));
 }
 
-/** keystream = SHA256(k1‖k2‖gate_id‖"0") ‖ SHA256(k1‖k2‖gate_id‖"1")  (32 bytes) */
+/**
+ * keystream = SHA256(k1‖k2‖gate_id‖"0") ‖ SHA256(k1‖k2‖gate_id‖"1")  (32 bytes)
+ *
+ * Each SHA-256 call natively outputs 256 bits; for the concatenation of two
+ * of them to total 256 bits (matching the 128-bit label + 128-bit zero-check
+ * the ciphertext XORs against), each half is truncated to its first 128 bits
+ * before concatenating.
+ */
 async function keystream(k1, k2, gateId) {
   const gateIdBytes = enc.encode(gateId);
   const h0 = await sha256(concatBytes(k1, k2, gateIdBytes, enc.encode('0')));
   const h1 = await sha256(concatBytes(k1, k2, gateIdBytes, enc.encode('1')));
-  return concatBytes(h0, h1);
+  return concatBytes(h0.slice(0, 16), h1.slice(0, 16));
 }
 
 /** ciphertext = keystream ⊕ (label ‖ 0^128) */
