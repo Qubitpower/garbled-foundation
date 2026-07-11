@@ -1,14 +1,15 @@
-# Garbled Foundation
+# Garbled Circuits
 
 Source for [garbled.foundation](https://garbled.foundation) — a plain-spoken,
-working explanation of Yao's garbled circuits and secure two-party computation,
-aimed at engineers rather than cryptographers. Second site in the same network as
-[pedersen.foundation](https://pedersen.foundation), reusing its design system and
-Astro setup.
+working explanation of Yao's garbled circuits (Andrew Yao, FOCS '86) and secure
+two-party computation, aimed at engineers rather than cryptographers. Second
+site in the same small network as [Pedersen
+Commitments](https://pedersen.foundation), reusing its design system and Astro
+setup.
 
 Every historical claim is sourced (see `/history` and `/further-reading`), and
 every interactive demo computes real values client-side — nothing is mocked. See
-`/about` for the full mission statement.
+`/about` for what this site is and how to contribute.
 
 ## Stack
 
