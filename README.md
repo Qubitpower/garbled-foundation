@@ -18,7 +18,7 @@ every interactive demo computes real values client-side — nothing is mocked. S
 - [Shiki](https://shiki.style) for code highlighting (Astro's default)
 - The garbled-gate demo uses only the browser's built-in Web Crypto API
   (`crypto.subtle.digest('SHA-256', ...)`, `crypto.getRandomValues`) — no
-  external crypto library needed, unlike Pedersen Foundation's EC demos — see
+  external crypto library needed, unlike the Pedersen Commitments site's EC demos — see
   `src/lib/`
 
 ## Development
